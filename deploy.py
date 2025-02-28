@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from collections import defaultdict
@@ -236,6 +235,8 @@ if 'show_delete_confirm' not in st.session_state:
     st.session_state.show_delete_confirm = False
 if 'delete_product_key' not in st.session_state:
     st.session_state.delete_product_key = None
+if 'delete_success' not in st.session_state:
+    st.session_state.delete_success = False
 
 # Function to update quantity
 def update_quantity(part_number, product_name, change):
@@ -328,6 +329,9 @@ def delete_product():
                 del st.session_state.quantities[key]
                 save_cart(st.session_state.quantities)
                 calculate_cart_total()
+            
+            # Set success flag
+            st.session_state.delete_success = True
     
     # Reset confirmation state
     st.session_state.show_delete_confirm = False
@@ -477,7 +481,7 @@ with tabs[0]:
                 st.session_state.quantities = defaultdict(int)
                 st.session_state.cart_total = 0.0
                 save_cart(st.session_state.quantities)
-                st.experimental_rerun()
+                st.rerun()  # Updated from experimental_rerun()
 
 # Add New Product Tab
 with tabs[1]:
@@ -508,6 +512,11 @@ with tabs[1]:
 # Manage Inventory Tab
 with tabs[2]:
     st.markdown("<h2 style='text-align: center;'>Manage Inventory</h2>", unsafe_allow_html=True)
+    
+    # Display success message if product was deleted
+    if st.session_state.delete_success:
+        st.success("Product deleted successfully!")
+        st.session_state.delete_success = False  # Reset after showing
     
     # Display all products with delete buttons
     for index, row in st.session_state.products_df.iterrows():
@@ -558,22 +567,27 @@ with tabs[2]:
             if st.session_state.products_df is not None:
                 st.session_state.products_df = create_default_data()
                 st.success("Default data restored!")
-                st.experimental_rerun()
+                st.rerun()  # Updated from experimental_rerun()
 
-# Delete confirmation dialog
+# Delete confirmation dialog - Using Streamlit containers for better display
 if st.session_state.show_delete_confirm:
-    st.markdown("""
-    <div class="overlay">
-        <div class="dialog">
-            <h3>Confirm Deletion</h3>
-            <p>Are you sure you want to delete this product?</p>
-            <p>This action cannot be undone.</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Create a container for the confirmation dialog
+    confirmation_container = st.container()
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.button("Cancel", key="cancel_delete", on_click=cancel_delete)
-    with col2:
-        st.button("Delete", key="confirm_delete", on_click=delete_product)
+    with confirmation_container:
+        st.markdown("<div style='background-color: #f8d7da; padding: 20px; border-radius: 5px; border: 1px solid #f5c6cb;'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #721c24;'>Confirm Deletion</h3>", unsafe_allow_html=True)
+        st.markdown("<p>Are you sure you want to delete this product?</p>", unsafe_allow_html=True)
+        st.markdown("<p>This action cannot be undone.</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Add buttons for confirmation
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Cancel", key="cancel_delete"):
+                cancel_delete()
+                st.rerun()  # Updated from experimental_rerun()
+        with col2:
+            if st.button("Delete", key="confirm_delete"):
+                delete_product()
+                st.rerun()  # Updated from experimental_rerun()
